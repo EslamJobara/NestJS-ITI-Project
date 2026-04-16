@@ -31,14 +31,23 @@ export class JwtAuthGuard implements CanActivate {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
       });
 
+      // Enhanced validation check for required claims
+      if (!payload.sub || !payload.email || !payload.role) {
+        throw new UnauthorizedException('Token payload is missing required user details.');
+      }
+
       if (payload.tokenType !== 'access') {
-        throw new UnauthorizedException('Invalid token type');
+        throw new UnauthorizedException('Invalid token type specified in JWT.');
       }
 
       request.user = payload;
       return true;
-    } catch {
-      throw new UnauthorizedException('Invalid or expired token');
+    } catch (e) {
+      // Catch specific JWT exceptions for better user messaging
+      const message = e.name === 'TokenExpiredError'
+          ? 'Access token expired. Please refresh your session.'
+          : e.message || 'Invalid or expired token';
+      throw new UnauthorizedException(message);
     }
   }
 
